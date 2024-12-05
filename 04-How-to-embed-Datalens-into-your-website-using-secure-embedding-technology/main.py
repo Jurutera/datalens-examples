@@ -13,9 +13,9 @@ from user_auth import get_user_oauth_token, get_user_jwt_token, decode_user_jwt_
 app = FastAPI()
 
 
-def get_datalens_token(uid: int) -> str:
+def get_datalens_token(uid: int, dashboard: str = 'default') -> str:
     logger.debug("start get_datalens_token")
-    embed_details = get_embed_details()
+    embed_details = get_embed_details(dashboard)
     now = int(time.time())
     payload = {
         'embedId': embed_details.get('embed_data_id'),
@@ -37,7 +37,7 @@ def get_datalens_token(uid: int) -> str:
     return encoded_token
 
 
-def get_embed_page(user_data: dict) -> str | RedirectResponse:
+def get_embed_page(user_data: dict, dashboard: str = 'default') -> str | RedirectResponse:
     logger.debug("start get_embed_page")
     try:
         logger.debug({"message": "catch token", "uid": user_data.get('uid')})
@@ -46,8 +46,7 @@ def get_embed_page(user_data: dict) -> str | RedirectResponse:
                 <html>
                     
                    <body>
-                      <h1>Привет {user_data.get('name')}! Твой uid - {user_data.get('uid')} </h1>
-                      <iframe src="https://datalens.yandex.cloud/embeds/dash#dl_embed_token={get_datalens_token(user_data.get('uid'))}" style="position:fixed; top:0; left:0; bottom:0; right:0; width:100%; height:100%; border:none; margin:0; padding:0; overflow:hidden; z-index:999999;"></iframe>
+                      <iframe src="https://datalens.yandex.cloud/embeds/dash#dl_embed_token={get_datalens_token(user_data.get('uid'),dashboard=dashboard)}" style="position:fixed; top:0; left:0; bottom:0; right:0; width:100%; height:100%; border:none; margin:0; padding:0; overflow:hidden; z-index:999999;"></iframe>
                    </body>
                 </html>
                 """
@@ -75,8 +74,8 @@ async def home(request: Request):
         return embed_page
 
 
-@app.get('/get_datalens_url', response_class=RedirectResponse)
-async def get_datalens_url(request: Request):
+@app.get('/dash1', response_class=HTMLResponse)
+async def dash1(request: Request):
     logger.debug("get / request")
     token = request.cookies.get('datalensEmbedToken')
     if token is None:
@@ -84,9 +83,12 @@ async def get_datalens_url(request: Request):
         return RedirectResponse(url=f"/auth_page")
     else:
         user_data = decode_user_jwt_token(user_jwt_token=token)
+        logger.debug({'message': 'end get_datalens_token',
+                      'uid': user_data.get('uid'),
+                      'exp': datetime.fromtimestamp(user_data.get('exp'))})
+        embed_page = get_embed_page(user_data=user_data, dashboard='dash1')
         logger.debug("got datalensEmbedToken cookie, return embed page")
-        return RedirectResponse(
-        url=f"https://datalens.yandex.cloud/embeds/dash#dl_embed_token={get_datalens_token(user_data.get('uid'))}")
+        return embed_page
 
 
 @app.get('/auth_page', response_class=HTMLResponse)
