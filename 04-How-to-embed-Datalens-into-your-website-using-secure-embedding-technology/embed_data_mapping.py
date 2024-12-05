@@ -4,6 +4,11 @@ def get_embed_details(name: str = 'default') -> dict | None:
             'embed_data_id': '',
             'embed_key': b"""
                          """
+        },
+        'dash1': {
+            'embed_data_id': '',
+            'embed_key': b"""
+                         """
         }
     }
     return map.get(f'{name}')
